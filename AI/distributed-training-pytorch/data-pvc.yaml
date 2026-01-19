@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: training-data-pvc
+spec:
+  accessModes:
+    - ReadOnlyMany  # Multiple pods can read the same data
+  resources:
+    requests:
+      storage: 50Gi
+  # For production, use a StorageClass appropriate for your cluster
+  # storageClassName: fast-ssd
+
