@@ -1,8 +1,8 @@
 # Distributed Training with PyTorch on Kubernetes
 
-## Purpose / What You'll Learn
+## Purpose
 
-This example demonstrates how to run distributed training using PyTorch's Distributed Data Parallel (DDP) on Kubernetes. You'll learn how to:
+This example demonstrates how to run distributed training using PyTorch's Distributed Data Parallel (DDP) on Kubernetes. This example shows how to:
 
 - Set up multi-node, multi-GPU distributed training using PyTorch DDP
 - Configure Kubernetes Jobs for parallel training workloads
