@@ -44,12 +44,13 @@ This example demonstrates how to run distributed training using PyTorch's Distri
 ---
 
 ## Quick Start / TL;DR
+Run single command to apply all config
 
 ```bash
 kubectl apply -k .
 ```
 
-## Detail each steps
+## Each step one by one
 
 ```bash
 # Create namespace
