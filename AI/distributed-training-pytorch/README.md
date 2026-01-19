@@ -13,7 +13,7 @@ This example demonstrates how to run distributed training using PyTorch's Distri
 
 ---
 
-## 📚 Table of Contents
+## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Quick Start / TL;DR](#quick-start--tldr)
