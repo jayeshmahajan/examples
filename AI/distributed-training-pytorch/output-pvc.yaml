@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: training-output-pvc
+spec:
+  accessModes:
+    - ReadWriteMany  # Multiple pods need to write checkpoints
+  resources:
+    requests:
+      storage: 100Gi
+  # For production, use a StorageClass appropriate for your cluster
+  # storageClassName: fast-ssd
+
