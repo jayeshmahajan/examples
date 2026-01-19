@@ -81,12 +81,12 @@ def train(rank, world_size, args):
     ])
     
     # Use DistributedSampler to ensure each process gets a different subset
-    dataset = datasets.CIFAR10(
-        root=args.data_dir,
-        train=True,
-        download=True,
-        transform=transform
-    )
+    # Prevent race conditions by only downloading on rank 0
+    if rank == 0:
+        datasets.CIFAR10(root=args.data_dir, train=True, download=True, transform=transform)
+    dist.barrier() # Wait for rank 0 to finish download
+    dataset = datasets.CIFAR10(root=args.data_dir, train=True, download=False, transform=transform)
+
     sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank)
     dataloader = DataLoader(
         dataset,
@@ -128,7 +128,9 @@ def train(rank, world_size, args):
             print(f'Epoch {epoch} completed. Average Loss: {avg_loss:.4f}')
             
             # Save checkpoint
-            checkpoint_path = os.path.join(args.output_dir, f'checkpoint_epoch_{epoch}.pt')
+            # Save checkpoints only from rank 0 to avoid file corruption
+            if rank == 0:
+                checkpoint_path = os.path.join(args.output_dir, f'checkpoint_epoch_{epoch}.pt')
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': ddp_model.module.state_dict(),
@@ -139,8 +141,9 @@ def train(rank, world_size, args):
     
     if rank == 0:
         writer.close()
-        # Save final model
-        final_model_path = os.path.join(args.output_dir, 'final_model.pt')
+        # Save final model only from rank 0
+        if rank == 0:
+            final_model_path = os.path.join(args.output_dir, 'final_model.pt')
         torch.save(ddp_model.module.state_dict(), final_model_path)
         print(f'Final model saved to {final_model_path}')
     
