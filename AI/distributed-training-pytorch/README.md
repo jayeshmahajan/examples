@@ -41,6 +41,17 @@ This example demonstrates how to run distributed training using PyTorch's Distri
 
 **Note:** This example uses CIFAR-10 dataset which will be downloaded automatically. For production use, you should pre-populate the data volume with your training dataset.
 
+### Local Python Setup (for running `train.py`)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+In your editor, select the `.venv` interpreter so `torch`/`torchvision`
+imports resolve.
+
 ---
 
 ## Quick Start / TL;DR
@@ -54,10 +65,10 @@ kubectl apply -k .
 
 ```bash
 # Create namespace
-kubectl create namespace pytorch-training
+kubectl apply -f namespace.yaml
 
 # Apply ConfigMaps
-kubectl apply -f training-config.yaml -n pytorch-training
+kubectl apply -f train-config.yaml -n pytorch-training
 kubectl apply -f training-script-configmap.yaml -n pytorch-training
 
 # Create PersistentVolumeClaims
@@ -66,9 +77,6 @@ kubectl apply -f output-pvc.yaml -n pytorch-training
 
 # Create headless Service for pod communication
 kubectl apply -f service.yaml -n pytorch-training
-
-# Create Workload for workload aware scheduling (v1.35)
-kubectl apply -f workload.yaml -n pytorch-training
 
 # Start distributed training job
 kubectl apply -f training-job.yaml -n pytorch-training
@@ -87,7 +95,7 @@ kubectl logs -f job/pytorch-ddp-training -n pytorch-training
 Create a dedicated namespace for the training job:
 
 ```bash
-kubectl create namespace pytorch-training
+kubectl apply -f namespace.yaml
 ```
 
 Using a namespace helps organize resources and simplifies cleanup.
@@ -97,11 +105,11 @@ Using a namespace helps organize resources and simplifies cleanup.
 ConfigMaps store training configuration and the training script:
 
 ```bash
-kubectl apply -f training-config.yaml -n pytorch-training
+kubectl apply -f train-config.yaml -n pytorch-training
 kubectl apply -f training-script-configmap.yaml -n pytorch-training
 ```
 
-**training-config.yaml**: Contains training hyperparameters (epochs, batch size) that can be easily modified.
+**train-config.yaml**: Contains training hyperparameters (epochs, batch size) that can be easily modified.
 
 **training-script-configmap.yaml**: Contains the PyTorch training script that will be mounted into the training pods.
 
@@ -114,8 +122,12 @@ kubectl apply -f data-pvc.yaml -n pytorch-training
 kubectl apply -f output-pvc.yaml -n pytorch-training
 ```
 
-- **data-pvc.yaml**: Read-only volume for training data (ReadOnlyMany access mode allows multiple pods to read the same data)
-- **output-pvc.yaml**: Read-write volume for model checkpoints and outputs (ReadWriteMany allows multiple pods to write)
+- **data-pvc.yaml**: Training data volume. Default uses `ReadWriteOnce` for GKE PD dynamic provisioning.
+- **output-pvc.yaml**: Output/checkpoint volume. Default uses `ReadWriteOnce`.
+
+**Note (GKE PD):** `ReadOnlyMany`/`ReadWriteMany` are not supported for dynamic
+provisioning on GKE PD. For multi-node shared data/output, use an RWX storage
+class such as Filestore and update the PVCs accordingly.
 
 **Note:** For local development, you may need to create corresponding PersistentVolumes or use a StorageClass that supports the required access modes.
 
@@ -265,7 +277,7 @@ And update the `WORLD_SIZE` environment variable:
 
 ### Change Training Hyperparameters
 
-Edit `training-config.yaml`:
+Edit `train-config.yaml`:
 
 ```yaml
 data:
@@ -363,7 +375,20 @@ Or use your storage system's backup mechanism if using cloud storage.
 
 ---
 
-### Method 1: Delete Individual Resources (Recommended for Selective Cleanup)
+### Method 1: Delete Everything with Kustomize (Fast and Consistent)
+
+If you applied the manifests with Kustomize, the simplest cleanup is:
+
+```bash
+kubectl delete -k .
+```
+
+**Note:** This also deletes the namespace because `namespace.yaml` is part of the kustomization.
+If you want to keep the namespace, remove `namespace.yaml` from `kustomization.yaml` before deleting.
+
+---
+
+### Method 2: Delete Individual Resources (Recommended for Selective Cleanup)
 
 This method allows you to delete resources one by one, giving you control over what to keep.
 
@@ -394,7 +419,7 @@ kubectl get svc -n pytorch-training
 
 ```bash
 # Delete training configuration
-kubectl delete -f training-config.yaml -n pytorch-training
+kubectl delete -f train-config.yaml -n pytorch-training
 
 # Delete training script ConfigMap
 kubectl delete -f training-script-configmap.yaml -n pytorch-training
@@ -434,7 +459,7 @@ kubectl get namespace pytorch-training
 
 ---
 
-### Method 2: Delete All Resources Using Labels
+### Method 3: Delete All Resources Using Labels
 
 If all resources share the same label, you can delete them all at once:
 
@@ -448,7 +473,7 @@ kubectl get all,configmap,service,pvc,job -n pytorch-training
 
 ---
 
-### Method 3: Delete Everything via Namespace (Fastest)
+### Method 4: Delete Everything via Namespace (Fastest)
 
 The fastest way to delete everything is to delete the entire namespace:
 
@@ -493,7 +518,7 @@ kubectl delete -f service.yaml -n $NAMESPACE 2>/dev/null || true
 
 # Delete ConfigMaps
 echo "Deleting ConfigMaps..."
-kubectl delete -f training-config.yaml -n $NAMESPACE 2>/dev/null || true
+kubectl delete -f train-config.yaml -n $NAMESPACE 2>/dev/null || true
 kubectl delete -f training-script-configmap.yaml -n $NAMESPACE 2>/dev/null || true
 
 # Prompt before deleting PVCs
@@ -659,7 +684,7 @@ kubectl run -it --rm debug --image=busybox --restart=Never -n pytorch-training -
 **Issue**: Training fails with OOM errors.
 
 **Solution:**
-- Reduce batch size in `training-config.yaml`
+- Reduce batch size in `train-config.yaml`
 - Use fewer GPUs per pod
 - Use gradient accumulation in your training script
 - Use a smaller model
