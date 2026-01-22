@@ -4,19 +4,19 @@ kind: Kustomization
 namespace: pytorch-training
 
 resources:
+  # Namespace
+  - namespace.yaml
+
   # Storage
   - data-pvc.yaml
   - output-pvc.yaml
 
   # Config and scripts
-  - training-config.yaml
+  - train-config.yaml
   - training-script-configmap.yaml
 
   # Networking
   - service.yaml
-
-  # Kubernetes v1.35 workload-aware scheduling
-  - workload.yaml
 
   # Distributed training job
   - training-job.yaml
