@@ -4,7 +4,7 @@ metadata:
   name: training-output-pvc
 spec:
   accessModes:
-    - ReadWriteMany  # Multiple pods need to write checkpoints
+    - ReadWriteOnce  # Multiple pods need to write checkpoints
   resources:
     requests:
       storage: 100Gi
