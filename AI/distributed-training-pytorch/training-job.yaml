@@ -16,20 +16,28 @@ spec:
       labels:
         app: pytorch-training
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
       # IMPORTANT: subdomain must match the headless Service name for stable pod DNS
       # Service name in your repo: pytorch-training-headless
       subdomain: pytorch-training-headless
-
-      # Kubernetes v1.35 workload aware scheduling link
-      workloadRef:
-        name: pytorch-ddp-workload
-        podGroup: ddp-workers
 
       restartPolicy: Never
 
       containers:
       - name: trainer
         image: pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         command: ["/bin/bash"]
         args:
         - -c
@@ -44,8 +52,10 @@ spec:
 
           export WORLD_SIZE="${WORLD_SIZE}"
 
-          # Install required packages
-          pip install -q torchvision tensorboard
+          # Install required packages (non-root)
+          export HOME=/tmp
+          export PIP_CACHE_DIR=/tmp/pip-cache
+          pip install -q --user torchvision tensorboard
 
           # Run training script
           python /workspace/train.py \
