@@ -4,6 +4,25 @@ PyTorch Distributed Data Parallel (DDP) Training Script
 
 This script demonstrates distributed training using PyTorch DDP.
 It trains a simple CNN on CIFAR-10 as an example.
+
+In the training script, the “training data code” is:
+It defines preprocessing: converts images to tensors and normalizes RGB channels.
+It loads CIFAR‑10 into args.data_dir and auto‑downloads it if missing.
+It shards the dataset across workers using DistributedSampler so each rank gets different data.
+It builds a DataLoader with that sampler and the configured batch size.
+
+Here’s how the sampler and epochs interact in this script:
+DistributedSampler(dataset, num_replicas=world_size, rank=rank) splits the dataset into world_size shards and gives each rank a unique shard. This prevents different workers from training on the same samples in the same epoch.
+sampler.set_epoch(epoch) is called each epoch so that the shuffling is different across epochs but still consistent across ranks. Without this, every epoch would use the same shard order, which hurts training.
+The DataLoader(..., sampler=sampler) uses that sampler instead of shuffle=True, so each rank iterates only over its shard.
+Net effect: each rank sees a different subset each epoch, and across all ranks you cover the whole dataset without overlap.
+
+It’s a small image‑classifier that learns to recognize which of 10 categories a 32×32 color image belongs to. It does this in stages:
+Convolution layers (conv1/conv2/conv3): think of these as pattern detectors that look for small visual features (edges, corners, textures). Each layer finds more complex patterns than the previous one.
+Pooling (pool): repeatedly shrinks the image by keeping the strongest signals. This makes the model faster and helps it focus on the most important patterns.
+Fully‑connected layers (fc1/fc2): combine the detected patterns to decide the final label (one of 10 classes).
+Dropout: randomly “turns off” some neurons during training to prevent over‑reliance on any one path, which helps generalization.
+So “simple CNN” just means a small, basic image‑recognition network, not a large or state‑of‑the‑art model.
 """
 
 import argparse
