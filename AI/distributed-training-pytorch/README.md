@@ -122,14 +122,20 @@ kubectl apply -f data-pvc.yaml -n pytorch-training
 kubectl apply -f output-pvc.yaml -n pytorch-training
 ```
 
-- **data-pvc.yaml**: Training data volume. Default uses `ReadWriteOnce` for GKE PD dynamic provisioning.
-- **output-pvc.yaml**: Output/checkpoint volume. Default uses `ReadWriteOnce`.
+- **data-pvc.yaml**: Training data volume. Default uses `ReadWriteOnce` access mode.
+- **output-pvc.yaml**: Output/checkpoint volume. Default uses `ReadWriteOnce` access mode.
 
-**Note (GKE PD):** `ReadOnlyMany`/`ReadWriteMany` are not supported for dynamic
-provisioning on GKE PD. For multi-node shared data/output, use an RWX storage
-class such as Filestore and update the PVCs accordingly.
+**Storage Access Modes:**
+- **ReadWriteOnce (RWO)**: Single pod can mount. This is the default for most cloud block storage (GKE PD, AWS EBS, Azure Disk) and many on-prem storage solutions.
+- **ReadWriteMany (RWX)**: Multiple pods can mount simultaneously. Requires network-attached storage like NFS, CephFS, or cloud file storage (GKE Filestore, AWS EFS, Azure Files).
 
-**Note:** For local development, you may need to create corresponding PersistentVolumes or use a StorageClass that supports the required access modes.
+**Cloud-Specific Notes:**
+- **GKE**: `ReadOnlyMany`/`ReadWriteMany` are not supported for dynamic provisioning on GKE Persistent Disks. For multi-node shared data/output, use an RWX StorageClass such as Filestore and update the PVCs accordingly.
+- **EKS**: EBS volumes support `ReadWriteOnce` only. For `ReadWriteMany`, use EFS (Elastic File System) with the `efs-sc` StorageClass.
+- **AKS**: Azure Disks support `ReadWriteOnce` only. For `ReadWriteMany`, use Azure Files with the `azurefile` StorageClass.
+- **On-Prem**: Use StorageClasses that match your storage backend (e.g., NFS, CephFS, GlusterFS) which typically support `ReadWriteMany`.
+
+**Note:** For local development or on-prem clusters, you may need to create corresponding PersistentVolumes or use a StorageClass that supports the required access modes.
 
 ### 4. Create Headless Service
 
@@ -318,7 +324,24 @@ Replace the script in `training-script-configmap.yaml` with your own PyTorch tra
 
 ## Platform-Specific Configuration
 
-### GKE (Google Kubernetes Engine)
+### On-Prem Kubernetes
+
+For on-premises Kubernetes clusters, configure nodeSelector based on your node labeling scheme:
+
+```yaml
+nodeSelector:
+  accelerator: nvidia-gpu
+  gpu-type: v100
+```
+
+Adjust the labels to match how your GPU nodes are labeled. Common approaches:
+- Label nodes with GPU type: `gpu-type: v100`, `gpu-type: a100`
+- Label nodes with accelerator: `accelerator: nvidia-gpu`
+- Use custom labels that match your infrastructure
+
+### Cloud Provider Configurations
+
+#### GKE (Google Kubernetes Engine)
 
 Uncomment the GKE nodeSelector in `training-job.yaml`:
 
@@ -330,7 +353,7 @@ nodeSelector:
 
 Available GPU types: `nvidia-tesla-v100`, `nvidia-tesla-t4`, `nvidia-tesla-a100`, etc.
 
-### EKS (Amazon Elastic Kubernetes Service)
+#### EKS (Amazon Elastic Kubernetes Service)
 
 Uncomment the EKS nodeSelector:
 
@@ -341,7 +364,7 @@ nodeSelector:
 
 Available instance types: `p3.2xlarge`, `p3.8xlarge`, `p4d.24xlarge`, etc.
 
-### AKS (Azure Kubernetes Service)
+#### AKS (Azure Kubernetes Service)
 
 Uncomment the AKS nodeSelector:
 

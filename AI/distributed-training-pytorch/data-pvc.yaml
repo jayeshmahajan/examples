@@ -4,10 +4,15 @@ metadata:
   name: training-data-pvc
 spec:
   accessModes:
-    - ReadWriteOnce  # Multiple pods can read the same data
+    # ReadWriteOnce: Single pod can mount (typical for cloud block storage like GKE PD, EBS, Azure Disk)
+    # ReadWriteMany: Multiple pods can mount simultaneously (requires NFS, CephFS, or cloud file storage)
+    # For multi-node training with shared data, consider ReadWriteMany with appropriate StorageClass
+    - ReadWriteOnce
   resources:
     requests:
       storage: 50Gi
-  # For production, use a StorageClass appropriate for your cluster
+  # StorageClass configuration:
+  # - Cloud providers: Omit to use default StorageClass (e.g., GKE: standard, EKS: gp3, AKS: managed-premium)
+  # - On-prem: Specify a StorageClass that matches your storage backend (e.g., nfs-client, cephfs, local-path)
   # storageClassName: fast-ssd
 

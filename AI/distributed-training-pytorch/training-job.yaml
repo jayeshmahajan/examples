@@ -124,18 +124,26 @@ spec:
           name: training-script
           defaultMode: 0755
 
-      # Node selectors are the main difference among cloud providers
-      # Uncomment the appropriate section for your cloud provider
+      # Node selectors are the main difference among cloud providers and on-prem setups
+      # Uncomment the appropriate section for your environment
       #
-      # GKE
+      # For on-prem Kubernetes: Use labels that match your GPU node configuration
+      # Example for on-prem:
+      # nodeSelector:
+      #   accelerator: nvidia-gpu
+      #   gpu-type: v100
+      #
+      # Cloud-specific configurations:
+      #
+      # GKE (Google Kubernetes Engine)
       # nodeSelector:
       #   cloud.google.com/gke-accelerator: nvidia-tesla-v100
       #   cloud.google.com/gke-gpu-driver-version: default
       #
-      # EKS
+      # EKS (Amazon Elastic Kubernetes Service)
       # nodeSelector:
       #   node.kubernetes.io/instance-type: p3.2xlarge
       #
-      # AKS
+      # AKS (Azure Kubernetes Service)
       # nodeSelector:
       #   agentpiscasi.com/gpu: "true"  # Common label for AKS GPU nodes

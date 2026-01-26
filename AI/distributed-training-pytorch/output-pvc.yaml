@@ -4,10 +4,16 @@ metadata:
   name: training-output-pvc
 spec:
   accessModes:
-    - ReadWriteOnce  # Multiple pods need to write checkpoints
+    # ReadWriteOnce: Single pod can mount (typical for cloud block storage like GKE PD, EBS, Azure Disk)
+    # ReadWriteMany: Multiple pods can mount simultaneously (requires NFS, CephFS, or cloud file storage)
+    # Note: With ReadWriteOnce, only rank 0 should write checkpoints (as implemented in train.py)
+    # For true multi-pod checkpoint writing, use ReadWriteMany with appropriate StorageClass
+    - ReadWriteOnce
   resources:
     requests:
       storage: 100Gi
-  # For production, use a StorageClass appropriate for your cluster
+  # StorageClass configuration:
+  # - Cloud providers: Omit to use default StorageClass (e.g., GKE: standard, EKS: gp3, AKS: managed-premium)
+  # - On-prem: Specify a StorageClass that matches your storage backend (e.g., nfs-client, cephfs, local-path)
   # storageClassName: fast-ssd
 
